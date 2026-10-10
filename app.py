@@ -1506,4 +1506,148 @@ elif page == "Inventory":
     c1.metric("Tracked items", len(inventory))
     c2.metric("Critical", len(critical_stock))
     c3.metric("Below minimum", len(low_stock))
-    c4.metric("Inventory items", len(inventory))
+    
+    c4.metric(
+        "Items in range",
+        sum(1 for item in inventory if inventory_status(item) == "IN RANGE"),
+    )
+
+    st.write("")
+    st.markdown("### Current stock levels")
+
+    inventory_rows = []
+    for item in inventory:
+        inventory_rows.append({
+            "Item": item["item"],
+            "Category": item["category"],
+            "Available stock": item["stock"],
+            "Minimum threshold": item["minimum"],
+            "Unit": item["unit"],
+            "Status": inventory_status(item),
+        })
+
+    st.dataframe(
+        pd.DataFrame(inventory_rows),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.markdown("### ✦ Edit stock")
+
+    item_names = [item["item"] for item in inventory]
+
+    if item_names:
+        selected_item_name = st.selectbox(
+            "Select an item to update",
+            item_names,
+            key="inventory_edit_item",
+        )
+
+        selected_item = next(
+            item for item in inventory
+            if item["item"] == selected_item_name
+        )
+
+        with st.form("edit_inventory_form"):
+            updated_stock = st.number_input(
+                f"Available stock ({selected_item['unit']})",
+                min_value=0,
+                value=int(selected_item["stock"]),
+                step=1,
+            )
+
+            updated_minimum = st.number_input(
+                f"Minimum threshold ({selected_item['unit']})",
+                min_value=0,
+                value=int(selected_item["minimum"]),
+                step=1,
+            )
+
+            save_stock = st.form_submit_button(
+                "Save stock changes",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if save_stock:
+            for item in st.session_state.inventory:
+                if item["item"] == selected_item_name:
+                    item["stock"] = int(updated_stock)
+                    item["minimum"] = int(updated_minimum)
+                    break
+
+            st.success(
+                f"Updated stock for {selected_item_name}. "
+                "The stock status has been recalculated."
+            )
+            st.rerun()
+
+    with st.expander("＋ Add an inventory item"):
+        with st.form("add_inventory_item_form"):
+            new_item_name = st.text_input("Item name")
+            new_item_category = st.selectbox(
+                "Category",
+                ["PPE", "Equipment", "Facilities", "Supplies", "Other"],
+            )
+            new_item_stock = st.number_input(
+                "Initial stock",
+                min_value=0,
+                value=0,
+                step=1,
+            )
+            new_item_minimum = st.number_input(
+                "Minimum threshold",
+                min_value=0,
+                value=10,
+                step=1,
+            )
+            new_item_unit = st.text_input("Unit", value="units")
+
+            add_item = st.form_submit_button(
+                "Add inventory item",
+                type="primary",
+            )
+
+        if add_item:
+            normalized_name = new_item_name.strip()
+
+            if not normalized_name:
+                st.warning("Enter an item name.")
+            elif any(
+                item["item"].casefold() == normalized_name.casefold()
+                for item in st.session_state.inventory
+            ):
+                st.warning("An item with that name already exists.")
+            elif not new_item_unit.strip():
+                st.warning("Enter a unit, such as boxes, kits, or units.")
+            else:
+                st.session_state.inventory.append({
+                    "item": normalized_name,
+                    "category": new_item_category,
+                    "stock": int(new_item_stock),
+                    "minimum": int(new_item_minimum),
+                    "unit": new_item_unit.strip(),
+                    "status": "Review needed",
+                })
+
+                st.success(f"Added {normalized_name} to inventory.")
+                st.rerun()
+
+    st.caption(
+        "Demo inventory changes are stored in the current Streamlit session. "
+        "They are not saved to a permanent database and may reset when the "
+        "session restarts. Verify stock physically before ordering."
+    )
+
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+st.markdown(
+    '<div class="cf-footer">'
+    'CareFlow AI · AICON’26 · THE TECHIES · '
+    'Synthetic demonstration data · Human review required'
+    '</div>',
+    unsafe_allow_html=True,
+)
