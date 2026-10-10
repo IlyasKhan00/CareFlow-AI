@@ -1507,4 +1507,3 @@ elif page == "Inventory":
     c2.metric("Critical", len(critical_stock))
     c3.metric("Below minimum", len(low_stock))
     c4.metric("Inventory items", len(inventory))
-)
