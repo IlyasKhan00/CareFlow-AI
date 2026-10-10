@@ -1506,7 +1506,5 @@ elif page == "Inventory":
     c1.metric("Tracked items", len(inventory))
     c2.metric("Critical", len(critical_stock))
     c3.metric("Below minimum", len(low_stock))
-    c4.metric(
-    "In range",
-    int((inventory["status"] == "In range").sum())
+    c4.metric("Inventory items", len(inventory))
 )
